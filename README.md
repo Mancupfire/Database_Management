@@ -47,16 +47,16 @@ The diagram below illustrates the high-level user flow within the MoneyMinder sy
 ![Personal Financial Management System Workflow](https://github.com/Mancupfire/Database_Management/blob/main/Image/Workflow.png)
 
 ## 🧱 Planned Core Entities
-*Database Schema Outline (Updated for 3 new features):*
+*Database Schema Outline:*
 
 1.  **Users:** Stores credentials, profile information, and **`base_currency` (default currency)**.
 2.  **Groups & User_Groups:** Manages group information and group membership relationships.
 3.  **Accounts:** Represents fund sources (e.g., Cash, Bank Account, Credit Card).
 4.  **Categories:** Defines types of spending/income.
-5.  **Transactions (MAJOR UPDATE):** The central fact table.
+5.  **Transactions:** The central fact table.
     * Existing fields: amount, date, description, type, UserID, AccountID, CategoryID, GroupID (nullable).
     * **New fields for Multi-Currency:** `original_amount` (foreign currency amount), `currency_code` (foreign currency type, e.g., USD), `exchange_rate` (applied rate).
-6.  **Recurring_Payments (NEW):** Stores definitions for repeating expenses.
+6.  **Recurring_Payments:** Stores definitions for repeating expenses.
     * Fields: `frequency` (e.g., monthly/weekly), `start_date`, `next_due_date`, estimated amount, and foreign keys linking to User and Category.
 7.  **Budgets:** Stores spending limits set by a user for specific categories.
 
