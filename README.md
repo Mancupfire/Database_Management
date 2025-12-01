@@ -1,9 +1,13 @@
-# Database Management
-
 # 📌 MoneyMinder: Personal Finance Management System
+Team Name: 
+- Nguyen Son Giang
+- Tran Nam Nhat Anh
+- Nguyen Tran Nhat Minh
+- Nguyen Hoang Nam
+
 
 ## 📄 Brief Description
-**MoneyMinder** is a comprehensive database-driven application designed to help individuals track their income, expenses, and savings goals. 
+**MoneyMinder** is a comprehensive database-driven application designed to help individuals track their income, expenses, and savings goals.
 
 **The Problem:** Many individuals struggle to maintain financial health due to scattered data across various bank accounts and cash transactions, leading to a lack of visibility into spending habits and difficulty in adhering to budgets.
 
@@ -23,6 +27,12 @@
 2.  **Security:** User passwords must be hashed; SQL injection prevention measures must be implemented.
 3.  **Performance:** Queries for transaction history should execute in under 2 seconds for datasets up to 10,000 records.
 4.  **Scalability:** The database schema should support the future addition of features like "Recurring Transactions" without major restructuring.
+
+## 🔄 System Workflow
+
+The diagram below illustrates the high-level user flow within the MoneyMinder system, from initial access to managing transactions and viewing reports.
+
+![Personal Financial Management System Workflow](image_1.png)
 
 ## 🧱 Planned Core Entities
 *Brief outline of the database schema:*
