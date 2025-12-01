@@ -32,7 +32,7 @@ Team Name:
 
 The diagram below illustrates the high-level user flow within the MoneyMinder system, from initial access to managing transactions and viewing reports.
 
-![Personal Financial Management System Workflow](image_1.png)
+![Personal Financial Management System Workflow]([image_1.png](https://github.com/Mancupfire/Database_Management/blob/main/Image/Workflow.png))
 
 ## 🧱 Planned Core Entities
 *Brief outline of the database schema:*
