@@ -24,6 +24,12 @@ echo "✓ Python3 is installed"
 # Step 1: Database Setup
 echo ""
 echo "Step 1: Setting up database..."
+echo "WARNING: This will DROP and recreate MoneyMinder_DB."
+read -p "Continue? (y/N): " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+    echo "Setup cancelled."
+    exit 0
+fi
 echo "Please enter your MySQL root password when prompted:"
 
 mysql -u root -p < Physical_Schema_Definition.sql

@@ -6,6 +6,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def _parse_origins(raw):
+    """Return a list of origins from a comma-separated env string."""
+    if not raw:
+        return []
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+
 class Config:
     """Base configuration"""
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-please-change')
@@ -15,7 +21,7 @@ class Config:
     DB_CONFIG = {
         'host': os.getenv('DB_HOST', 'localhost'),
         'user': os.getenv('DB_USER', 'moneyminder_app'),
-        'password': os.getenv('DB_PASSWORD', 'App@2024Secure!'),
+        'password': os.getenv('DB_PASSWORD', 'MM_App@2024!r3set'),
         'database': os.getenv('DB_NAME', 'MoneyMinder_DB'),
         'port': int(os.getenv('DB_PORT', 3306)),
         'charset': 'utf8mb4'
@@ -31,6 +37,9 @@ class Config:
     
     # JWT configuration
     JWT_EXPIRATION_HOURS = 24
+
+    # CORS configuration
+    FRONTEND_ORIGINS = _parse_origins(os.getenv('FRONTEND_ORIGINS', 'http://localhost:8080'))
 
 class DevelopmentConfig(Config):
     """Development configuration"""

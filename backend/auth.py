@@ -22,12 +22,13 @@ class AuthManager:
         return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
     
     @staticmethod
-    def generate_token(user_id, username, email):
+    def generate_token(user_id, username, email, role):
         """Generate JWT token"""
         payload = {
             'user_id': user_id,
             'username': username,
             'email': email,
+            'role': role,
             'exp': datetime.utcnow() + timedelta(hours=Config.JWT_EXPIRATION_HOURS),
             'iat': datetime.utcnow()
         }
@@ -70,7 +71,31 @@ def require_auth(f):
         request.user_id = payload['user_id']
         request.username = payload['username']
         request.email = payload['email']
+        request.role = payload.get('role', 'user')
         
         return f(*args, **kwargs)
     
     return decorated_function
+
+
+def require_role(allowed_roles):
+    """Decorator to require a specific role"""
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            token = AuthManager.get_token_from_request()
+            if not token:
+                return jsonify({'error': 'Authentication required', 'code': 'AUTH_REQUIRED'}), 401
+            payload = AuthManager.decode_token(token)
+            if not payload:
+                return jsonify({'error': 'Invalid or expired token', 'code': 'INVALID_TOKEN'}), 401
+            role = payload.get('role', 'user')
+            if role not in allowed_roles:
+                return jsonify({'error': 'Forbidden', 'code': 'FORBIDDEN'}), 403
+            request.user_id = payload['user_id']
+            request.username = payload['username']
+            request.email = payload['email']
+            request.role = role
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator

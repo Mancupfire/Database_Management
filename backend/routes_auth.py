@@ -34,15 +34,15 @@ def register():
         # Insert new user
         user_id = Database.execute_query(
             """
-            INSERT INTO Users (username, email, password_hash, base_currency)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO Users (username, email, password_hash, base_currency, role)
+            VALUES (%s, %s, %s, %s, %s)
             """,
-            (data['username'], data['email'], password_hash, data.get('base_currency', 'VND')),
+            (data['username'], data['email'], password_hash, data.get('base_currency', 'VND'), 'user'),
             commit=True
         )
         
         # Generate token
-        token = AuthManager.generate_token(user_id, data['username'], data['email'])
+        token = AuthManager.generate_token(user_id, data['username'], data['email'], 'user')
         
         return jsonify({
             'message': 'Registration successful',
@@ -51,7 +51,8 @@ def register():
                 'user_id': user_id,
                 'username': data['username'],
                 'email': data['email'],
-                'base_currency': data.get('base_currency', 'VND')
+                'base_currency': data.get('base_currency', 'VND'),
+                'role': 'user'
             }
         }), 201
         
@@ -71,7 +72,7 @@ def login():
         # Get user from database
         user = Database.execute_query(
             """
-            SELECT user_id, username, email, password_hash, base_currency
+            SELECT user_id, username, email, password_hash, base_currency, role
             FROM Users WHERE email = %s
             """,
             (data['email'],),
@@ -89,7 +90,8 @@ def login():
         token = AuthManager.generate_token(
             user['user_id'],
             user['username'],
-            user['email']
+            user['email'],
+            user['role']
         )
         
         return jsonify({
@@ -99,7 +101,8 @@ def login():
                 'user_id': user['user_id'],
                 'username': user['username'],
                 'email': user['email'],
-                'base_currency': user['base_currency']
+                'base_currency': user['base_currency'],
+                'role': user['role']
             }
         }), 200
         
@@ -116,7 +119,7 @@ def get_current_user():
         try:
             user = Database.execute_query(
                 """
-                SELECT user_id, username, email, base_currency, created_at
+                SELECT user_id, username, email, base_currency, role, created_at
                 FROM Users WHERE user_id = %s
                 """,
                 (request.user_id,),

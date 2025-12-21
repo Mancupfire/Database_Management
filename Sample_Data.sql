@@ -10,11 +10,11 @@ USE MoneyMinder_DB;
 -- ==========================================================
 -- Password for all users: "Demo@2024" (bcrypt hashed)
 
-INSERT INTO Users (username, email, password_hash, base_currency, created_at) VALUES 
-('john_doe', 'john.doe@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'VND', '2024-01-15 10:00:00'),
-('jane_smith', 'jane.smith@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'USD', '2024-02-20 14:30:00'),
-('nguyen_van_a', 'nguyenvana@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'VND', '2024-03-10 09:15:00'),
-('tran_thi_b', 'tranthib@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'VND', '2024-03-12 11:20:00');
+INSERT INTO Users (username, email, password_hash, role, base_currency, created_at) VALUES 
+('john_doe', 'john.doe@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'admin', 'VND', '2024-01-15 10:00:00'),
+('jane_smith', 'jane.smith@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'user', 'USD', '2024-02-20 14:30:00'),
+('nguyen_van_a', 'nguyenvana@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'user', 'VND', '2024-03-10 09:15:00'),
+('tran_thi_b', 'tranthib@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'user', 'VND', '2024-03-12 11:20:00');
 
 -- ==========================================================
 -- 2. GROUPS (Shared Expenses)

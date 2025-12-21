@@ -213,8 +213,8 @@ SELECT * FROM View_Category_Alert_Stats WHERE user_id = 1;
 1. **Password Hashing**: SHA256 for stored passwords
 2. **JWT Authentication**: Secure token-based auth
 3. **SQL Injection Prevention**: Parameterized queries
-4. **Role-Based Access**: MySQL users with least privilege
-5. **CORS Protection**: Configured for specific origins
+4. **Role-Based Access**: MySQL users with least privilege (rotate credentials in `.env` and `Physical_Schema_Definition.sql` before deployment)
+5. **CORS Protection**: Restrict via `FRONTEND_ORIGINS` env (default `http://localhost:8080`)
 
 ## 📈 Performance Optimizations
 
@@ -282,7 +282,7 @@ Full API documentation available at: [Backend README](backend/README.md)
 ### Current Limitations
 - Group expense splitting not fully implemented
 - Multi-currency exchange rate is manual (no API integration)
-- Recurring payments require manual trigger (no scheduler)
+- Recurring payments scheduler is provided as a lightweight worker (`backend/recurring_worker.py`) but is not yet packaged as a service
 
 ### Planned Enhancements
 - Automated recurring payment scheduler (cron job)

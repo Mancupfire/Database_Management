@@ -15,6 +15,8 @@ CREATE TABLE Users (
     username VARCHAR(50) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
+    password_hash_enc VARBINARY(512) NULL, -- encrypted copy of the hash (AES)
+    role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
     base_currency VARCHAR(3) DEFAULT 'VND', -- e.g., VND, USD
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -130,6 +132,25 @@ CREATE INDEX idx_transactions_user_date ON Transactions(user_id, transaction_dat
 -- Speed up "Alert" calculation (Finding average for a specific category)
 CREATE INDEX idx_transactions_alert ON Transactions(user_id, category_id, amount);
 
+-- Speed up category/date filters (budgets, analytics, trends)
+CREATE INDEX idx_transactions_user_category_date ON Transactions(user_id, category_id, transaction_date);
+
+-- Speed up group expense lookups
+CREATE INDEX idx_transactions_group_date ON Transactions(group_id, transaction_date);
+
+-- Speed up recurring task scheduler (next due items per user)
+CREATE INDEX idx_recurring_due_date ON Recurring_Payments(user_id, next_due_date);
+
+-- Encryption key helper (change the seed before production)
+DROP FUNCTION IF EXISTS FN_Get_Encryption_Key;
+DELIMITER //
+CREATE FUNCTION FN_Get_Encryption_Key()
+RETURNS BINARY(32)
+DETERMINISTIC
+RETURN UNHEX(SHA2('MoneyMinder-Encryption-Key-ChangeMe', 256));
+//
+DELIMITER ;
+
 -- ==========================================================
 -- 4. VIEW DEFINITIONS (Logic Layer)
 -- ==========================================================
@@ -159,6 +180,46 @@ SELECT
 FROM Transactions t
 JOIN Categories c ON t.category_id = c.category_id
 GROUP BY t.user_id, month_year, c.category_name, c.type;
+
+-- VIEW 3: Monthly Trends with Window Functions
+-- Provides running totals and rolling 3-month averages using window functions
+CREATE OR REPLACE VIEW View_Monthly_Trends_Window AS
+SELECT
+    user_id,
+    month_year,
+    type,
+    monthly_total,
+    SUM(monthly_total) OVER (
+        PARTITION BY user_id, type
+        ORDER BY month_year
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total,
+    AVG(monthly_total) OVER (
+        PARTITION BY user_id, type
+        ORDER BY month_year
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ) AS rolling_avg_3m
+FROM (
+    SELECT
+        t.user_id,
+        DATE_FORMAT(t.transaction_date, '%Y-%m') AS month_year,
+        c.type,
+        SUM(t.amount) AS monthly_total
+    FROM Transactions t
+    JOIN Categories c ON t.category_id = c.category_id
+    GROUP BY t.user_id, month_year, c.type
+) monthly_totals;
+
+-- VIEW 4: Users (with decrypted hash copy for audit/ops)
+CREATE OR REPLACE VIEW View_Users_Secure AS
+SELECT 
+    user_id,
+    username,
+    email,
+    CAST(AES_DECRYPT(password_hash_enc, FN_Get_Encryption_Key()) AS CHAR(255)) AS password_hash_decrypted,
+    base_currency,
+    created_at
+FROM Users;
 
 -- ==========================================================
 -- 5. STORED PROCEDURES (Business Logic)
@@ -361,17 +422,38 @@ INSERT INTO Categories (user_id, category_name, type) VALUES
 -- Note: Update passwords before production deployment
 
 -- Admin User (Full Access)
-CREATE USER IF NOT EXISTS 'moneyminder_admin'@'localhost' IDENTIFIED BY 'Admin@2024Secure!';
+CREATE USER IF NOT EXISTS 'moneyminder_admin'@'localhost' IDENTIFIED BY 'MM_Admin@2024!r3set';
 GRANT ALL PRIVILEGES ON MoneyMinder_DB.* TO 'moneyminder_admin'@'localhost';
 
 -- Application User (CRUD Operations)
-CREATE USER IF NOT EXISTS 'moneyminder_app'@'localhost' IDENTIFIED BY 'App@2024Secure!';
+CREATE USER IF NOT EXISTS 'moneyminder_app'@'localhost' IDENTIFIED BY 'MM_App@2024!r3set';
 GRANT SELECT, INSERT, UPDATE, DELETE ON MoneyMinder_DB.* TO 'moneyminder_app'@'localhost';
 GRANT EXECUTE ON MoneyMinder_DB.* TO 'moneyminder_app'@'localhost';
 
 -- Read-Only User (Analytics/Reporting)
-CREATE USER IF NOT EXISTS 'moneyminder_readonly'@'localhost' IDENTIFIED BY 'ReadOnly@2024Secure!';
+CREATE USER IF NOT EXISTS 'moneyminder_readonly'@'localhost' IDENTIFIED BY 'MM_Read@2024!r3set';
 GRANT SELECT ON MoneyMinder_DB.* TO 'moneyminder_readonly'@'localhost';
 
 -- Apply privileges
 FLUSH PRIVILEGES;
+
+-- Encrypt password hashes at rest (keeps bcrypt hash encrypted in DB)
+DELIMITER //
+CREATE TRIGGER TRG_Users_Encrypt_Insert
+BEFORE INSERT ON Users
+FOR EACH ROW
+BEGIN
+    SET NEW.password_hash_enc = AES_ENCRYPT(NEW.password_hash, FN_Get_Encryption_Key());
+END//
+DELIMITER ;
+
+DELIMITER //
+CREATE TRIGGER TRG_Users_Encrypt_Update
+BEFORE UPDATE ON Users
+FOR EACH ROW
+BEGIN
+    IF NEW.password_hash <> OLD.password_hash THEN
+        SET NEW.password_hash_enc = AES_ENCRYPT(NEW.password_hash, FN_Get_Encryption_Key());
+    END IF;
+END//
+DELIMITER ;

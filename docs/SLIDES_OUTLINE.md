@@ -1,0 +1,29 @@
+# Slides Outline (Presentation)
+
+- Title & Team
+  - Project name, team members, roles
+- Problem & Solution
+  - Pain points; MoneyMinder overview
+- Requirements
+  - Functional and non-functional highlights
+- Architecture
+  - Tech stack, components, data flow
+- Database Design
+  - ERD snapshot; tables, keys; normalization notes
+  - Procedures, triggers, views (including window-function trends)
+  - Security (encryption, MySQL roles)
+  - Performance indexes/partitioning
+- Implementation Highlights
+  - Backend APIs, auth/JWT, role-based admin check
+  - Frontend UI/UX features
+  - Background recurring worker (`backend/recurring_worker.py`) and exchange-rate manual entry note
+- Demo
+  - Login, CRUD, analytics, alerts, recurring, budget
+- Performance Evidence
+  - EXPLAIN ANALYZE results (screenshots from `docs/perf_results.txt`)
+  - Load sim summary
+- Testing
+  - Automated smoke tests, UI smoke, test plan
+- Lessons & Next Steps
+  - Risks, future work
+- Q&A

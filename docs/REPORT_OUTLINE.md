@@ -1,0 +1,29 @@
+# Final Report Outline (PDF)
+
+- Cover
+  - Title, team, date
+- Executive Summary
+  - Problem, solution, key outcomes
+- Requirements
+  - Functional/non-functional
+- Architecture & Stack
+- Database Design
+  - ERD, schema (tables, constraints), normalization
+  - Procedures, triggers, views (window functions)
+  - Security: encryption, MySQL roles, app roles/JWT
+- Implementation
+  - Backend APIs, auth, admin check
+  - Frontend UI features
+  - Background recurring worker (`backend/recurring_worker.py`), manual exchange-rate entry, and future automation
+- Performance
+  - Indexes/partitioning choices
+  - EXPLAIN ANALYZE evidence (attach `docs/perf_results.txt` screenshots)
+  - Load simulation results
+- Testing
+  - Automated smoke tests, UI smoke, manual checks, coverage gaps
+- Deployment/Setup
+  - Scripts (`setup.sh`, `run.sh`) and environment notes
+- Conclusion & Future Work
+  - Risks, improvements
+- Appendix
+  - Test plan, key commands, credentials for demo

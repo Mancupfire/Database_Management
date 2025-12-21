@@ -29,6 +29,11 @@ python app.py
 
 The API will be available at `http://localhost:5000`
 
+5. **Optional: Start Recurring Worker**
+```bash
+python recurring_worker.py  # polls every 60s by default; override with RECURRING_POLL_SECONDS
+```
+
 ## API Endpoints
 
 ### Authentication

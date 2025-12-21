@@ -16,6 +16,7 @@ from routes_analytics import analytics_bp
 from routes_budgets import budgets_bp
 from routes_groups import groups_bp
 from routes_recurring import recurring_bp
+from routes_admin import admin_bp
 
 def create_app(config_name='development'):
     """Application factory"""
@@ -26,9 +27,10 @@ def create_app(config_name='development'):
     app.url_map.strict_slashes = False
     
     # Enable CORS
+    allowed_origins = app.config.get('FRONTEND_ORIGINS') or ['http://localhost:8080']
     CORS(app, resources={
         r"/api/*": {
-            "origins": "*",
+            "origins": allowed_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
         }
@@ -43,6 +45,7 @@ def create_app(config_name='development'):
     app.register_blueprint(budgets_bp)
     app.register_blueprint(groups_bp)
     app.register_blueprint(recurring_bp)
+    app.register_blueprint(admin_bp)
     
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])

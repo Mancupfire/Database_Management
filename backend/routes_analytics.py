@@ -173,6 +173,43 @@ def get_trends():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@analytics_bp.route('/monthly-trends', methods=['GET'])
+@require_auth
+def get_monthly_trends():
+    """Get window-function based monthly trends (running totals + rolling averages)"""
+    try:
+        months = request.args.get('months', 12, type=int)
+        txn_type = request.args.get('type')
+
+        query = """
+            SELECT 
+                month_year,
+                type,
+                monthly_total,
+                running_total,
+                rolling_avg_3m
+            FROM View_Monthly_Trends_Window
+            WHERE user_id = %s
+        """
+        params = [request.user_id]
+
+        if txn_type:
+            query += " AND type = %s"
+            params.append(txn_type)
+
+        if months:
+            query += " AND month_year >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL %s MONTH), '%Y-%m')"
+            params.append(months)
+
+        query += " ORDER BY month_year DESC, type"
+
+        trends = Database.execute_query(query, tuple(params), fetch_all=True)
+
+        return jsonify({'monthly_trends': trends}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @analytics_bp.route('/budget-status', methods=['GET'])
 @require_auth
 def get_budget_status():
