@@ -16,6 +16,7 @@ def get_transactions():
         # Get query parameters
         account_id = request.args.get('account_id', type=int)
         category_id = request.args.get('category_id', type=int)
+        group_id = request.args.get('group_id', type=int)
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         limit = request.args.get('limit', 50, type=int)
@@ -44,6 +45,10 @@ def get_transactions():
             query += " AND t.category_id = %s"
             params.append(category_id)
         
+        if group_id:
+            query += " AND t.group_id = %s"
+            params.append(group_id)
+        
         if start_date:
             query += " AND t.transaction_date >= %s"
             params.append(start_date)
@@ -56,6 +61,14 @@ def get_transactions():
         params.extend([limit, offset])
         
         transactions = Database.execute_query(query, tuple(params), fetch_all=True)
+        # Ensure transaction_date stays in local datetime string format (YYYY-MM-DD HH:mm:ss)
+        for t in transactions:
+            if t.get('transaction_date') is not None:
+                try:
+                    t['transaction_date'] = t['transaction_date'].strftime('%Y-%m-%d %H:%M:%S')
+                except Exception:
+                    # If already a string, leave as-is
+                    pass
         
         # Get total count
         count_query = """
@@ -72,6 +85,10 @@ def get_transactions():
         if category_id:
             count_query += " AND t.category_id = %s"
             count_params.append(category_id)
+        
+        if group_id:
+            count_query += " AND t.group_id = %s"
+            count_params.append(group_id)
         
         if start_date:
             count_query += " AND t.transaction_date >= %s"
@@ -118,6 +135,13 @@ def get_transaction(transaction_id):
         if not transaction:
             return jsonify({'error': 'Transaction not found'}), 404
         
+        # Format transaction_date to local string
+        if transaction.get('transaction_date') is not None:
+            try:
+                transaction['transaction_date'] = transaction['transaction_date'].strftime('%Y-%m-%d %H:%M:%S')
+            except Exception:
+                pass
+
         return jsonify({'transaction': transaction}), 200
         
     except Exception as e:

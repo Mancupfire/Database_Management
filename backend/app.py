@@ -6,6 +6,14 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from config import config
 from database import Database
+import atexit
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Import route blueprints
 from routes_auth import auth_bp
@@ -16,6 +24,16 @@ from routes_analytics import analytics_bp
 from routes_budgets import budgets_bp
 from routes_groups import groups_bp
 from routes_recurring import recurring_bp
+from routes_notifications import notifications_bp
+from routes_time import time_bp
+
+# Import scheduler (optional)
+try:
+    from scheduler import start_scheduler, stop_scheduler
+    SCHEDULER_AVAILABLE = True
+except ImportError:
+    SCHEDULER_AVAILABLE = False
+    logging.warning("APScheduler not available. Recurring payments will not be processed automatically.")
 
 def create_app(config_name='development'):
     """Application factory"""
@@ -43,6 +61,8 @@ def create_app(config_name='development'):
     app.register_blueprint(budgets_bp)
     app.register_blueprint(groups_bp)
     app.register_blueprint(recurring_bp)
+    app.register_blueprint(notifications_bp)
+    app.register_blueprint(time_bp)
     
     # Health check endpoint
     @app.route('/api/health', methods=['GET'])
@@ -114,6 +134,24 @@ if __name__ == '__main__':
     print("  GET    /api/categories         - List categories")
     print("  GET    /api/analytics/dashboard - Get dashboard data")
     print("=" * 60)
+    
+    # Start background scheduler if available
+    SCHEDULER_AVAILABLE = False  # Disabled scheduler
+    if SCHEDULER_AVAILABLE:
+        print("Starting background scheduler...")
+        start_scheduler()
+        print("✓ Scheduler started!")
+        print("  - Recurring payments: Daily at 1:00 AM")
+        print("  - Upcoming bills: Daily at 9:00 AM")
+        print("  - Unusual spending: Every 6 hours")
+        print("=" * 60)
+        
+        # Register cleanup on exit
+        atexit.register(stop_scheduler)
+    else:
+        print("⚠ Scheduler not available (install APScheduler)")
+        print("  Run: pip install APScheduler==3.10.4")
+        print("=" * 60)
     
     app.run(
         host=app.config['HOST'],

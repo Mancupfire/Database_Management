@@ -18,9 +18,13 @@ class Database:
         """
         connection = None
         try:
+            # Create connection config - set to Asia/Bangkok timezone (GMT+7)
+            db_config = Config.DB_CONFIG.copy()
+            
             connection = pymysql.connect(
-                **Config.DB_CONFIG,
-                cursorclass=DictCursor
+                **db_config,
+                cursorclass=DictCursor,
+                init_command="SET time_zone='+07:00'"  # Match local timezone
             )
             yield connection
         except pymysql.Error as e:

@@ -8,14 +8,13 @@ USE MoneyMinder_DB;
 -- ==========================================================
 -- 1. TEST USERS
 -- ==========================================================
--- Note: Passwords should be hashed in production. These are plain text for demo only.
--- Password for all users: "Demo@2024"
+-- Password for all users: "Demo@2024" (bcrypt hashed)
 
 INSERT INTO Users (username, email, password_hash, base_currency, created_at) VALUES 
-('john_doe', 'john.doe@example.com', SHA2('Demo@2024', 256), 'VND', '2024-01-15 10:00:00'),
-('jane_smith', 'jane.smith@example.com', SHA2('Demo@2024', 256), 'USD', '2024-02-20 14:30:00'),
-('nguyen_van_a', 'nguyenvana@example.com', SHA2('Demo@2024', 256), 'VND', '2024-03-10 09:15:00'),
-('tran_thi_b', 'tranthib@example.com', SHA2('Demo@2024', 256), 'VND', '2024-03-12 11:20:00');
+('john_doe', 'john.doe@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'VND', '2024-01-15 10:00:00'),
+('jane_smith', 'jane.smith@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'USD', '2024-02-20 14:30:00'),
+('nguyen_van_a', 'nguyenvana@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'VND', '2024-03-10 09:15:00'),
+('tran_thi_b', 'tranthib@example.com', '$2b$12$Uin1HqNfQFTLFSVrt6pEXeVJs22kEm78reC57/oeIrqn4XvE31wCu', 'VND', '2024-03-12 11:20:00');
 
 -- ==========================================================
 -- 2. GROUPS (Shared Expenses)

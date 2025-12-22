@@ -160,6 +160,95 @@ FROM Transactions t
 JOIN Categories c ON t.category_id = c.category_id
 GROUP BY t.user_id, month_year, c.category_name, c.type;
 
+-- VIEW 3: Unusual Spending Alert View
+-- Pre-calculates the rolling average and maximum spending per category for each user over the last 6 months.
+-- Use Case: Backend queries this view before inserting a new transaction. If the new transaction amount
+-- exceeds average_spent × 1.25, the system triggers an "Unusual Spending" alert.
+CREATE OR REPLACE VIEW View_Unusual_Spending_Alert AS
+SELECT 
+    t.user_id,
+    t.category_id,
+    c.category_name,
+    COUNT(t.transaction_id) as transaction_count,
+    AVG(t.amount) as average_spent,
+    MAX(t.amount) as max_spent,
+    STDDEV(t.amount) as std_deviation,
+    AVG(t.amount) * 1.25 as alert_threshold
+FROM Transactions t
+JOIN Categories c ON t.category_id = c.category_id
+WHERE t.transaction_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+  AND c.type = 'Expense'
+GROUP BY t.user_id, t.category_id, c.category_name
+HAVING COUNT(t.transaction_id) >= 3;  -- Need at least 3 transactions to establish pattern
+
+-- VIEW 4: Group Expense Summary View
+-- Calculates the total contribution of each member within shared groups.
+-- Use Case: Displayed on the "Group Details" page to show who has spent the most 
+-- and to help settle debts between roommates or travel companions.
+CREATE OR REPLACE VIEW View_Group_Expense_Summary AS
+SELECT 
+    t.group_id,
+    g.group_name,
+    t.user_id,
+    u.username,
+    u.email,
+    COUNT(DISTINCT t.transaction_id) as transaction_count,
+    SUM(CASE WHEN c.type = 'Expense' THEN ABS(t.amount) ELSE 0 END) as total_expenses,
+    SUM(CASE WHEN c.type = 'Income' THEN t.amount ELSE 0 END) as total_contributions,
+    SUM(CASE WHEN c.type = 'Expense' THEN ABS(t.amount) ELSE -t.amount END) as net_spending,
+    ROUND(SUM(CASE WHEN c.type = 'Expense' THEN ABS(t.amount) ELSE 0 END) / 
+          NULLIF((SELECT COUNT(DISTINCT ug.user_id) 
+                  FROM User_Groups ug 
+                  WHERE ug.group_id = t.group_id), 0), 2) as fair_share,
+    ROUND(SUM(CASE WHEN c.type = 'Expense' THEN ABS(t.amount) ELSE 0 END) - 
+          (SUM(CASE WHEN c.type = 'Expense' THEN ABS(t.amount) ELSE 0 END) / 
+           NULLIF((SELECT COUNT(DISTINCT ug.user_id) 
+                   FROM User_Groups ug 
+                   WHERE ug.group_id = t.group_id), 0)), 2) as balance_owed
+FROM Transactions t
+JOIN `Groups` g ON t.group_id = g.group_id
+JOIN Users u ON t.user_id = u.user_id
+JOIN Categories c ON t.category_id = c.category_id
+WHERE t.group_id IS NOT NULL
+GROUP BY t.group_id, g.group_name, t.user_id, u.username, u.email;
+
+-- VIEW 5: Upcoming Recurring Payments View
+-- Identifies active subscriptions that are due for payment within the next 7 days.
+-- Use Case: Displayed as a "Upcoming Bills" notification widget on the user's home screen.
+CREATE OR REPLACE VIEW View_Upcoming_Recurring_Payments AS
+SELECT 
+    rp.recurring_id,
+    rp.user_id,
+    u.username,
+    u.email,
+    rp.account_id,
+    a.account_name,
+    rp.category_id,
+    c.category_name,
+    rp.amount,
+    rp.frequency,
+    rp.next_due_date,
+    DATEDIFF(rp.next_due_date, CURDATE()) as days_until_due,
+    CASE 
+        WHEN DATEDIFF(rp.next_due_date, CURDATE()) = 0 THEN 'Due Today'
+        WHEN DATEDIFF(rp.next_due_date, CURDATE()) = 1 THEN 'Due Tomorrow'
+        WHEN DATEDIFF(rp.next_due_date, CURDATE()) < 0 THEN 'Overdue'
+        ELSE CONCAT('Due in ', DATEDIFF(rp.next_due_date, CURDATE()), ' days')
+    END as due_status,
+    CASE 
+        WHEN DATEDIFF(rp.next_due_date, CURDATE()) < 0 THEN 'critical'
+        WHEN DATEDIFF(rp.next_due_date, CURDATE()) <= 2 THEN 'high'
+        WHEN DATEDIFF(rp.next_due_date, CURDATE()) <= 5 THEN 'medium'
+        ELSE 'low'
+    END as urgency_level
+FROM Recurring_Payments rp
+JOIN Users u ON rp.user_id = u.user_id
+JOIN Accounts a ON rp.account_id = a.account_id
+JOIN Categories c ON rp.category_id = c.category_id
+WHERE rp.is_active = TRUE
+  AND rp.next_due_date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+ORDER BY rp.next_due_date ASC, rp.amount DESC;
+
 -- ==========================================================
 -- 5. STORED PROCEDURES (Business Logic)
 -- ==========================================================
@@ -168,7 +257,8 @@ GROUP BY t.user_id, month_year, c.category_name, c.type;
 -- Automatically generates a transaction from recurring payment and updates next due date
 DELIMITER //
 CREATE PROCEDURE SP_Create_Recurring_Transaction(
-    IN p_recurring_id INT
+    IN p_recurring_id INT,
+    IN p_transaction_datetime DATETIME
 )
 BEGIN
     DECLARE v_user_id INT;
@@ -177,6 +267,14 @@ BEGIN
     DECLARE v_amount DECIMAL(15, 2);
     DECLARE v_frequency VARCHAR(20);
     DECLARE v_next_due DATE;
+    DECLARE v_transaction_date DATETIME;
+    
+    -- Use provided datetime from browser (local time as-is)
+    IF p_transaction_datetime IS NOT NULL THEN
+        SET v_transaction_date = p_transaction_datetime;
+    ELSE
+        SET v_transaction_date = NOW();
+    END IF;
     
     -- Get recurring payment details
     SELECT user_id, account_id, category_id, amount, frequency, next_due_date
@@ -184,10 +282,11 @@ BEGIN
     FROM Recurring_Payments
     WHERE recurring_id = p_recurring_id AND is_active = TRUE;
     
-    -- Insert transaction
+    -- Insert transaction with specified datetime
     INSERT INTO Transactions (user_id, account_id, category_id, recurring_id, amount, transaction_date, description)
-    VALUES (v_user_id, v_account_id, v_category_id, p_recurring_id, v_amount, v_next_due, 
+    VALUES (v_user_id, v_account_id, v_category_id, p_recurring_id, v_amount, v_transaction_date, 
             CONCAT('Recurring payment - ', v_frequency));
+
     
     -- Update next due date based on frequency
     UPDATE Recurring_Payments
@@ -333,6 +432,26 @@ BEGIN
     END IF;
 END //
 DELIMITER ;
+
+-- ==========================================================
+-- 6. NOTIFICATIONS TABLE
+-- ==========================================================
+
+-- Notifications: Stores system notifications for users
+CREATE TABLE Notifications (
+    notification_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    type ENUM('upcoming_bill', 'unusual_spending', 'budget_alert') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    severity ENUM('info', 'warning', 'danger') DEFAULT 'info',
+    is_read BOOLEAN DEFAULT FALSE,
+    related_id INT NULL, -- Can reference transaction_id, recurring_id, or budget_id
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+    INDEX idx_user_unread (user_id, is_read),
+    INDEX idx_created_at (created_at)
+);
 
 -- ==========================================================
 -- 7. SEED DATA (System Defaults & Test Data)

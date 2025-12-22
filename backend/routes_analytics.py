@@ -4,6 +4,7 @@ Analytics and Reporting routes
 from flask import Blueprint, request, jsonify
 from database import Database
 from auth import require_auth
+from datetime import datetime
 
 analytics_bp = Blueprint('analytics', __name__, url_prefix='/api/analytics')
 
@@ -34,14 +35,16 @@ def get_dashboard():
             FROM Transactions t
             JOIN Categories c ON t.category_id = c.category_id
             WHERE t.user_id = %s 
-            AND t.transaction_date >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            AND t.transaction_date >= DATE_FORMAT(NOW(), '%%Y-%%m-01')
             GROUP BY c.type
             """,
             (request.user_id,),
             fetch_all=True
         )
         
-        monthly_data = {row['type']: float(row['total']) for row in monthly}
+        monthly_data = {}
+        if monthly:
+            monthly_data = {row['type']: float(row['total']) for row in monthly}
         
         # Get recent transactions
         recent = Database.execute_query(
@@ -74,6 +77,16 @@ def get_dashboard():
         }), 200
         
     except Exception as e:
+        import traceback
+        print(f"Dashboard error: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({
+            'error': str(e),
+            'accounts': {'total': 0, 'balance': 0},
+            'current_month': {'income': 0, 'expense': 0, 'net': 0},
+            'recent_transactions': []
+        }), 200  # Return 200 with empty data instead of 500
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @analytics_bp.route('/monthly-report', methods=['GET'])
@@ -250,6 +263,134 @@ def get_unusual_spending():
         )
         
         return jsonify({'alerts': alerts}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@analytics_bp.route('/monthly-trend', methods=['GET'])
+@require_auth
+def get_monthly_trend():
+    """Get income/expense trend for last 6 months"""
+    try:
+        # Get parameter for number of months (default 6, max 12)
+        months = min(int(request.args.get('months', 6)), 12)
+        
+        trend_data = Database.execute_query(
+            """
+            SELECT 
+                DATE_FORMAT(t.transaction_date, '%%Y-%%m') as month,
+                c.type,
+                SUM(ABS(t.amount)) as total
+            FROM Transactions t
+            JOIN Categories c ON t.category_id = c.category_id
+            WHERE t.user_id = %s
+            AND t.transaction_date >= DATE_SUB(CURDATE(), INTERVAL %s MONTH)
+            GROUP BY DATE_FORMAT(t.transaction_date, '%%Y-%%m'), c.type
+            ORDER BY month ASC
+            """,
+            (request.user_id, months),
+            fetch_all=True
+        )
+        
+        # Format data for Chart.js
+        months_list = []
+        income_data = []
+        expense_data = []
+        
+        # Group by month
+        month_map = {}
+        for row in trend_data:
+            month = row['month']
+            if month not in month_map:
+                month_map[month] = {'Income': 0, 'Expense': 0}
+            month_map[month][row['type']] = float(row['total'])
+        
+        # Sort and prepare arrays
+        for month in sorted(month_map.keys()):
+            months_list.append(month)
+            income_data.append(month_map[month]['Income'])
+            expense_data.append(month_map[month]['Expense'])
+        
+        return jsonify({
+            'labels': months_list,
+            'datasets': [
+                {
+                    'label': 'Income',
+                    'data': income_data,
+                    'backgroundColor': 'rgba(75, 192, 192, 0.6)',
+                    'borderColor': 'rgba(75, 192, 192, 1)',
+                    'borderWidth': 2
+                },
+                {
+                    'label': 'Expense',
+                    'data': expense_data,
+                    'backgroundColor': 'rgba(255, 99, 132, 0.6)',
+                    'borderColor': 'rgba(255, 99, 132, 1)',
+                    'borderWidth': 2
+                }
+            ]
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@analytics_bp.route('/yearly-summary', methods=['GET'])
+@require_auth
+def get_yearly_summary():
+    """Get yearly income/expense summary"""
+    try:
+        year = request.args.get('year', datetime.now().year)
+        
+        yearly_data = Database.execute_query(
+            """
+            SELECT 
+                MONTH(t.transaction_date) as month,
+                c.type,
+                SUM(ABS(t.amount)) as total
+            FROM Transactions t
+            JOIN Categories c ON t.category_id = c.category_id
+            WHERE t.user_id = %s
+            AND YEAR(t.transaction_date) = %s
+            GROUP BY MONTH(t.transaction_date), c.type
+            ORDER BY month ASC
+            """,
+            (request.user_id, year),
+            fetch_all=True
+        )
+        
+        # Prepare data for all 12 months
+        month_names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        income_data = [0] * 12
+        expense_data = [0] * 12
+        
+        for row in yearly_data:
+            month_idx = row['month'] - 1
+            if row['type'] == 'Income':
+                income_data[month_idx] = float(row['total'])
+            else:
+                expense_data[month_idx] = float(row['total'])
+        
+        return jsonify({
+            'year': year,
+            'labels': month_names,
+            'datasets': [
+                {
+                    'label': 'Income',
+                    'data': income_data,
+                    'backgroundColor': 'rgba(75, 192, 192, 0.6)',
+                    'borderColor': 'rgba(75, 192, 192, 1)',
+                    'borderWidth': 2
+                },
+                {
+                    'label': 'Expense',
+                    'data': expense_data,
+                    'backgroundColor': 'rgba(255, 99, 132, 0.6)',
+                    'borderColor': 'rgba(255, 99, 132, 1)',
+                    'borderWidth': 2
+                }
+            ]
+        }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

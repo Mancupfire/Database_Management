@@ -64,6 +64,37 @@ def get_budgets():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@budgets_bp.route('/<int:budget_id>', methods=['GET'])
+@require_auth
+def get_budget(budget_id):
+    """Get a single budget by ID"""
+    try:
+        query = """
+            SELECT 
+                b.budget_id, b.category_id, c.category_name,
+                b.amount_limit, b.start_date, b.end_date,
+                b.created_at
+            FROM Budgets b
+            JOIN Categories c ON b.category_id = c.category_id
+            WHERE b.budget_id = %s AND b.user_id = %s
+        """
+        
+        budget = Database.execute_query(query, (budget_id, request.user_id), fetch_one=True)
+        
+        if not budget:
+            return jsonify({'error': 'Budget not found'}), 404
+        
+        # Convert dates to strings
+        budget['start_date'] = budget['start_date'].strftime('%Y-%m-%d')
+        budget['end_date'] = budget['end_date'].strftime('%Y-%m-%d')
+        budget['created_at'] = budget['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        budget['amount_limit'] = float(budget['amount_limit'])
+        
+        return jsonify(budget), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @budgets_bp.route('/', methods=['POST'])
 @require_auth
 def create_budget():

@@ -580,6 +580,59 @@ box-shadow 0.3s;
   animation: fadeIn 0.5s ease-in;
 }
 
+/* Budget Filter and Sort Buttons */
+.budget-filter-btn.active,
+.budget-sort-btn.active {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+}
+
+.budget-filter-btn:hover,
+.budget-sort-btn:hover {
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Budget Filter and Sort Buttons */
+.budget-filter-btn.active,
+.budget-sort-btn.active {
+  background-color: var(--primary-color) !important;
+  color: white !important;
+  border-color: var(--primary-color) !important;
+}
+
+.budget-filter-btn:hover,
+.budget-sort-btn:hover {
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+.budget-sort-btn i {
+  font-size: 0.8rem;
+  margin-left: 4px;
+}
+
+/* Table Sorting */
+#transactionsTable th[data-sort] {
+  user-select: none;
+  position: relative;
+}
+
+#transactionsTable th[data-sort]:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+#transactionsTable th.sort-asc i::before {
+  content: "\F145" !important; /* bi-arrow-up */
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
+#transactionsTable th.sort-desc i::before {
+  content: "\F148" !important; /* bi-arrow-down */
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
 /* Toast Notifications */
 .toast-container {
   position: fixed;
@@ -924,4 +977,144 @@ box-shadow 0.3s;
   .stat-value {
     font-size: 1.5rem;
   }
+}
+
+/* Notification Styles */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-btn {
+  position: relative;
+  color: var(--text-primary);
+  padding: 0.5rem;
+  text-decoration: none;
+  font-size: 1.5rem;
+}
+
+.notification-btn:hover {
+  color: var(--primary-green);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--danger-color);
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 18px;
+  text-align: center;
+}
+
+.notification-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 380px;
+  max-height: 500px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.notification-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+}
+
+.notification-header h6 {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  background: var(--bg-primary);
+}
+
+.notification-item:hover {
+  background: var(--bg-secondary);
+}
+
+.notification-item.unread {
+  background: rgba(16, 185, 129, 0.05);
+  border-left: 3px solid var(--primary-green);
+}
+
+.notification-item.unread:hover {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.notification-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-right: 1rem;
+}
+
+.notification-icon.warning {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--warning-color);
+}
+
+.notification-icon.danger {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger-color);
+}
+
+.notification-icon.info {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--info-color);
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.notification-message {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.notification-time {
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
 }

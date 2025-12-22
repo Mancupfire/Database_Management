@@ -4,7 +4,6 @@ Authentication routes
 from flask import Blueprint, request, jsonify
 from database import Database
 from auth import AuthManager
-import hashlib
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
@@ -29,8 +28,8 @@ def register():
         if existing_user:
             return jsonify({'error': 'Email already registered'}), 409
         
-        # Hash password using SHA256 (matching the database seed data)
-        password_hash = hashlib.sha256(data['password'].encode()).hexdigest()
+        # Hash password using bcrypt for security
+        password_hash = AuthManager.hash_password(data['password'])
         
         # Insert new user
         user_id = Database.execute_query(
@@ -82,10 +81,8 @@ def login():
         if not user:
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Verify password using SHA256
-        password_hash = hashlib.sha256(data['password'].encode()).hexdigest()
-        
-        if password_hash != user['password_hash']:
+        # Verify password using bcrypt
+        if not AuthManager.verify_password(data['password'], user['password_hash']):
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Generate token
